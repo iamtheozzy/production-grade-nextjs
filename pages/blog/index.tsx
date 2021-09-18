@@ -32,8 +32,8 @@ Blog.defaultProps = {
   posts: [],
 }
 
-export function getStaticProps() {
-  const cmsPosts = postsFromCMS.published.map((post) => {
+export function getStaticProps(context) {
+  const cmsPosts = (context.preview ? postsFromCMS.draft : postsFromCMS.published).map((post) => {
     const { data } = matter(post)
     return data
   })

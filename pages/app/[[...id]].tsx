@@ -8,6 +8,8 @@ import User from '../../components/user'
 import FolderPane from '../../components/folderPane'
 import DocPane from '../../components/docPane'
 import NewFolderDialog from '../../components/newFolderDialog'
+import { getSession, useSession } from 'next-auth/client'
+import { folder, doc, connectToDB } from '../../db'
 
 const App: FC<{ folders?: any[]; activeFolder?: any; activeDoc?: any; activeDocs?: any[] }> = ({
   folders,
@@ -16,6 +18,7 @@ const App: FC<{ folders?: any[]; activeFolder?: any; activeDoc?: any; activeDocs
   activeDocs,
 }) => {
   const router = useRouter()
+  const [session, loading] = useSession()
   const [newFolderIsShown, setIsShown] = useState(false)
 
   const Page = () => {
@@ -30,7 +33,7 @@ const App: FC<{ folders?: any[]; activeFolder?: any; activeDoc?: any; activeDocs
     return null
   }
 
-  if (false) {
+  if (!session && !loading) {
     return (
       <Dialog
         isShown
@@ -56,11 +59,11 @@ const App: FC<{ folders?: any[]; activeFolder?: any; activeDoc?: any; activeDocs
           <NewFolderButton onClick={() => setIsShown(true)} />
         </Pane>
         <Pane>
-          <FolderList folders={folders} />{' '}
+          <FolderList folders={[{ _id: 1, name: 'Ozzy' }]} />{' '}
         </Pane>
       </Pane>
       <Pane marginLeft={300} width="calc(100vw - 300px)" height="100vh" overflowY="auto" position="relative">
-        <User user={{}} />
+        <User user={session.user} />
         <Page />
       </Pane>
       <NewFolderDialog close={() => setIsShown(false)} isShown={newFolderIsShown} onNewFolder={() => {}} />
@@ -70,6 +73,36 @@ const App: FC<{ folders?: any[]; activeFolder?: any; activeDoc?: any; activeDocs
 
 App.defaultProps = {
   folders: [],
+}
+
+export async function getServerSideProps(ctx) {
+  const session = await getSession(ctx)
+
+  if (!session) {
+    return {
+      props: { session }
+    }
+  }
+
+  const props:any = {}
+
+  const { db } = await connectToDB();
+  const folders = await folder.getFolders(db, session.user.id);
+
+  if(ctx.params.id){
+    props.activeFolder = folders.find((f) => f._id === ctx.params.id[0])
+    props.activeDocs = await doc.getDocsByFolder(db, props.activeFolder._id)
+
+    if(ctx.params.id.length > 1){
+      props.activeDoc = props.activeDocs.find((d) => d._id === ctx.params.id[2])
+    }
+  }
+  return {
+    props: {
+      session,
+      ...props
+    }
+  }
 }
 
 /**

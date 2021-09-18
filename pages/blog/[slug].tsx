@@ -61,7 +61,7 @@ export function getStaticPaths() {
 
   return {
     paths: slugs.map(s => ({params: {slug: s.slug}})),
-    fallback: false,
+    fallback: true,
   }
 }
 
@@ -71,18 +71,28 @@ export function getStaticPaths() {
  * Posts can come from the fs or our CMS
  */
 
-export function getStaticProps({params}) {
+export async function getStaticProps({params, previews}) {
   let post
   try {
     const filePath = path.join(process.cwd(), 'posts', params.slug + '.mdx')
     post = fs.readFileSync(filePath, 'utf8');
   } catch {
-    const cmsPosts = posts.published.map(p => {
+    const cmsPosts = (previews? posts.draft : posts.published).map(p => {
       return matter(p)
     })
 
     const match = cmsPosts.find(p => p.data.slug === params.slug)
     post = match.content
+  }
+
+  const { data } = matter(post)
+  const mdxSource = await renderToString(post, {scope: data})
+
+  return {
+    props: {
+      source: mdxSource,
+      frontMatter: data,
+    }
   }
 }
 

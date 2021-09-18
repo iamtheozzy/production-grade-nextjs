@@ -4,6 +4,7 @@ import { signOut } from 'next-auth/client'
 import { UserSession } from '../types'
 
 const User: FC<{ user: UserSession }> = ({ user }) => {
+  console.log(user)
   return (
     <Pane position="fixed" top={20} right={20}>
       <Popover
